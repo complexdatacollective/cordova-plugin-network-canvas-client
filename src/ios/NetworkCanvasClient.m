@@ -179,6 +179,8 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     if (command.arguments.count > 3) {
         body = [command.arguments objectAtIndex:3];
     }
+    
+    NSLog(@"incoming = %@ %@ %d", urlStr, downloadTargetUrl, isFileDownload);
 
     NSMutableURLRequest *req = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:urlStr]];
     req.HTTPMethod = method;
@@ -224,11 +226,10 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
         CDVFilesystemURL *cdvUrl = [CDVFilesystemURL fileSystemURLWithString:destinationFile];
         NSObject<CDVFileSystem> *fs = [self.cdvFilePlugin filesystemForURL:cdvUrl];
         NSString *destinationFilepath = [fs filesystemPathForURL:cdvUrl];
-        if (!destinationFilepath) {
-            [self sendErrorMessage:@"Invalid destination file" toCallbackId:callbackId];
-            return;
-        }
-        NSURL *destURL = [NSURL fileURLWithPath:destinationFilepath];
+        
+        NSLog(@"yoo = %@ %@", destinationFile, destinationFilepath);
+        
+        NSURL *destURL = [NSURL URLWithString:destinationFile];
         reqTask = [self downloadTaskForSession:session
                                    withRequest:req
                                     callbackId:callbackId
@@ -276,13 +277,23 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
         } else if (httpResponse.statusCode >= 400) {
             pluginResult = [self errorResultWithMessage:@"File download failed"];
         } else {
+            
+            NSString *fileName = [location lastPathComponent];
+            NSURL *destinationURL = [destination URLByAppendingPathComponent:fileName];
+            
+            NSLog(@"Moving file to %@", destinationURL);
+            
             NSFileManager *fileManager = [NSFileManager defaultManager];
 
-            BOOL success = [fileManager moveItemAtURL:location toURL:destination error:nil];
+            NSError *moveError;
+            BOOL success = [fileManager moveItemAtURL:location toURL:destinationURL error:&moveError];
+
             if (success) {
-                NSDictionary *fileInfo = [self.cdvFilePlugin makeEntryForURL:destination];
+                NSDictionary *fileInfo = [self.cdvFilePlugin makeEntryForURL:destinationURL];
+                NSLog(@"About to return %@", fileInfo);
                 pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:fileInfo];
             } else {
+                NSLog(@"Error moving file to destination: %@", moveError.localizedDescription);
                 pluginResult = [self errorResultWithMessage:@"Error processing downloaded file"];
             }
         }
