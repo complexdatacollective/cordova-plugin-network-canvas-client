@@ -227,8 +227,6 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
         NSObject<CDVFileSystem> *fs = [self.cdvFilePlugin filesystemForURL:cdvUrl];
         NSString *destinationFilepath = [fs filesystemPathForURL:cdvUrl];
         
-        NSLog(@"yoo = %@ %@", destinationFile, destinationFilepath);
-        
         NSURL *destURL = [NSURL URLWithString:destinationFile];
         reqTask = [self downloadTaskForSession:session
                                    withRequest:req
